@@ -26,7 +26,7 @@ class AICoach {
             ],
             secondInsult: [
                 'Tu viens encore d\'utiliser une insulte. Reformule ta phrase.',
-                'Je t\'ai déjà demandé de reformuler sans insulte. Essaie encore.',
+                'Je t\'aimer déjà demandé de reformuler sans insulte. Essaie encore.',
                 'Cette formulation contient encore une insulte. Recommence.',
                 'Je ne peux pas accepter cette formulation. Essaie encore.',
                 'Tu utilises encore des insultes. Fais un effort, s\'il te plaît.',
@@ -44,7 +44,7 @@ class AICoach {
                 'Je t\'ai déjà demandé plusieurs fois. Fais un vrai effort.',
                 'Il est important que tu changes ta façon de t\'exprimer.',
                 'Je ne vais pas accepter cette formulation. Essaie encore.',
-                'Tu dois sérieusement travailler sur ton langage.',
+                'Tu devez sérieusement travailler sur ton langage.',
                 'Cette formulation n\'est pas acceptable. Change-la.',
                 'Je compte sur toi pour trouver une meilleure expression.'
             ],
@@ -162,7 +162,7 @@ class AICoach {
                 'Tu es en série depuis {streak} jours sans insulte. Excellent !',
                 'Tu as reformulé {reformulations} phrases avec succès. Bravo !',
                 'Ton niveau actuel est {level}. Continue à t\'améliorer !',
-                'Tu as gagné {xp} XP récemment. Super progrès !',
+                'Tu avez gagné {xp} XP récemment. Super progrès !',
                 'Tu as complété {challenges} défis. Continue comme ça !',
                 'Ton temps sans insulte est de {time}. Impressionnant !',
                 'Tu as obtenu {badges} badges. Tu es sur la bonne voie !',
@@ -309,8 +309,7 @@ class AICoach {
         const progress = storage.getUserProgress();
         const lowerInput = transcript.toLowerCase().trim();
         
-        // --- DEBUT LOGIQUE DE DIALOGUE CONTINU AJOUTÉE ---
-        // Réponses contextuelles pour simuler une véritable interaction
+        // --- LOGIQUE DE DIALOGUE CONTINU ---
         if (lowerInput.includes("bonjour") || lowerInput.includes("salut") || lowerInput.includes("hey")) {
             return this.mode === 'child' ? "Salut à toi ! Comment se passe ta journée sans gros mots ?" : "Bonjour ! Comment se passe votre entraînement aujourd'hui ?";
         }
@@ -320,34 +319,28 @@ class AICoach {
         }
         
         if (lowerInput.includes("merci")) {
-            return "Je vous en prie ! C'est un réel plaisir de vous accompagner vers un langage plus serein.";
+            return "Je vous en prie ! C'est un réel plaisir de vous accompagner.";
         }
         
         if (lowerInput.includes("difficile") || lowerInput.includes("dur") || lowerInput.includes("j'arrive pas")) {
-            return "Changer ses expressions quotidiennes demande du temps et de la patience. Ne baissez pas les bras, vous êtes là pour apprendre !";
+            return "Changer ses habitudes de langage demande du temps. Ne baissez pas les bras !";
         }
 
-        // Si l'historique contient d'autres interactions, rebondir sur un ancien sujet
         if (this.conversationHistory.length > 3 && Math.random() < 0.3) {
             const previousUserMessage = this.conversationHistory[this.conversationHistory.length - 3].text;
             if (previousUserMessage && previousUserMessage.length > 5) {
-                return `C'est très intéressant. Cela me fait penser à ce que vous disiez tout à l'heure : "${previousUserMessage}". Pouvez-vous développer dans un langage soigné ?`;
+                return `C'est très intéressant. Cela me fait penser à ce que vous disiez tout à l'heure : "${previousUserMessage}".`;
             }
         }
-        // --- FIN LOGIQUE DE DIALOGUE CONTINU ---
 
-        // Comportement adaptatif aléatoire d'origine (Statistiques & Encouragements)
         if (Math.random() < 0.1) {
-            const encouragement = this.getRandomEncouragement();
-            return encouragement;
+            return this.getRandomEncouragement();
         }
         
         if (this.conversationHistory.length > 5 && Math.random() < 0.2) {
-            const progressMessage = this.getProgressMessage(stats, progress);
-            return progressMessage;
+            return this.getProgressMessage(stats, progress);
         }
         
-        // Réponse par défaut pour valider la fluidité de la discussion
         return "Je valide votre formulation. Poursuivons notre échange.";
     }
     
@@ -429,12 +422,7 @@ class AICoach {
     formatTime(seconds) {
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
-        
-        if (hours > 0) {
-            return `${hours}h ${minutes}m`;
-        } else {
-            return `${minutes}m`;
-        }
+        return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
     }
     
     getGreeting() {
@@ -456,91 +444,47 @@ class AICoach {
         const insults = storage.getInsults();
         const now = new Date();
         const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-        
-        const recentInsults = insults.filter(insult => 
-            new Date(insult.timestamp) > oneHourAgo
-        );
-        
-        return recentInsults.length;
+        return insults.filter(insult => new Date(insult.timestamp) > oneHourAgo).length;
     }
     
     shouldIntervene() {
-        if (this.mode === 'strict') {
-            return true;
-        }
-        
-        const frequency = this.getInsultFrequency();
-        
-        if (frequency >= 5) {
-            return true;
-        }
-        
-        if (this.consecutiveInsults >= 3) {
-            return true;
-        }
-        
-        return false;
+        if (this.mode === 'strict') return true;
+        if (this.getInsultFrequency() >= 5) return true;
+        return this.consecutiveInsults >= 3;
     }
     
     getCoachingIntensity() {
         switch (this.mode) {
-            case 'strict':
-                return 10;
-            case 'child':
-                return 3;
-            case 'adult':
-                return 7;
-            case 'training':
-                return 5;
-            default:
-                return Math.min(5 + this.consecutiveInsults, 10);
+            case 'strict': return 10;
+            case 'child': return 3;
+            case 'adult': return 7;
+            case 'training': return 5;
+            default: return Math.min(5 + this.consecutiveInsults, 10);
         }
     }
     
     adaptResponseBasedOnProgress() {
         const stats = storage.getStatistics();
         const progress = storage.getUserProgress();
-        
         if (stats.politenessScore > 80 && progress.level >= 5) {
             this.mode = 'adult';
         } else if (stats.politenessScore < 50 && progress.level < 3) {
             this.mode = 'child';
         }
-        
         this.saveSession();
     }
     
     generatePersonalizedFeedback() {
         const stats = storage.getStatistics();
         const progress = storage.getUserProgress();
-        
         const feedback = [];
         
-        if (stats.insultsToday === 0) {
-            feedback.push('Excellent ! Aucune insulte aujourd\'hui.');
-        } else if (stats.insultsToday < 3) {
-            feedback.push('Bien ! Tu as très peu d\'insultes aujourd\'hui.');
-        } else if (stats.insultsToday < 10) {
-            feedback.push('Tu peux encore améliorer ton langage aujourd\'hui.');
-        } else {
-            feedback.push('Tu as utilisé beaucoup d\'insultes aujourd\'hui. Concentre-toi davantage.');
-        }
+        if (stats.insultsToday === 0) feedback.push('Excellent ! Aucune insulte aujourd\'hui.');
+        else if (stats.insultsToday < 3) feedback.push('Bien ! Tu as très peu d\'insultes aujourd\'hui.');
+        else feedback.push('Concentrez-vous davantage sur votre langage.');
         
-        if (stats.currentStreak >= 7) {
-            feedback.push('Incroyable ! Tu tiens une série de plus d\'une semaine.');
-        } else if (stats.currentStreak >= 3) {
-            feedback.push('Bravo pour ta série de plusieurs jours.');
-        }
-        
-        if (progress.level >= 10) {
-            feedback.push('Tu as atteint un niveau avancé. Continue comme ça !');
-        } else if (progress.level >= 5) {
-            feedback.push('Tu progresses bien. Continue tes efforts !');
-        }
-        
+        if (stats.currentStreak >= 3) feedback.push('Bravo pour votre série de politesse.');
         return feedback;
     }
 }
-
-// Initialisation globale de l'instance du coach vocal
 const aiCoach = new AICoach();
