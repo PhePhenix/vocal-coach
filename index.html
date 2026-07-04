@@ -139,6 +139,9 @@
             </header>
             
             <div class="content-area">
+                <!-- 🎙️ Bouton d'action Rapide Micro Mobile (Masqué sur PC par le CSS) -->
+                <button id="mic-btn" class="mic-button">Activer le micro</button>
+
                 <div class="view" id="dashboardView">
                     <div class="stats-grid">
                         <div class="stat-card">
@@ -623,15 +626,16 @@
         </div>
     </div>
     
+    <!-- 📄 Scripts ordonnés logiquement pour éviter les erreurs d'initialisation -->
     <script src="storage.js"></script>
+    <script src="settings.js"></script>
+    <script src="notifications.js"></script>
     <script src="insult-detection.js"></script>
     <script src="reformulation.js"></script>
-    <script src="voice.js"></script>
     <script src="ai.js"></script>
     <script src="statistics.js"></script>
     <script src="achievements.js"></script>
-    <script src="notifications.js"></script>
-    <script src="settings.js"></script>
+    <script src="voice.js"></script>
     <script src="ui.js"></script>
     <script src="script.js"></script>
 </body>
