@@ -1,6 +1,6 @@
 /**
- * Vocal Coach - Module Voix & Reconnaissance (Version Mobile Intégrale)
- * Gère le micro (actions tactiles) et les entrées clavier adaptées aux smartphones.
+ * Vocal Coach - Module Voix & Reconnaissance (Version Mobile avec Anti-Écho)
+ * Gère le micro, la synthèse vocale avec coupure automatique et les entrées clavier.
  */
 
 const VoiceManager = {
@@ -11,8 +11,8 @@ const VoiceManager = {
     init() {
         this.initSpeechRecognition();
         this.setupMobileEvents();
-        this.setupKeyboardInput(); // <-- Ligne ajoutée pour ne rien oublier
-        console.log("🎙️ Module Voice (Version Mobile Intégrale) initialisé.");
+        this.setupKeyboardInput();
+        console.log("🎙️ Module Voice (Version Mobile Anti-Écho) initialisé.");
     },
 
     /**
@@ -60,7 +60,7 @@ const VoiceManager = {
     },
 
     /**
-     * Attache les événements tactiles au bouton Micro (Optimisé pour les pouces)
+     * Attache les événements tactiles au bouton Micro (Optimisé pour mobiles)
      */
     setupMobileEvents() {
         const micBtn = document.getElementById('mic-btn') || document.querySelector('.mic-button');
@@ -90,20 +90,16 @@ const VoiceManager = {
 
         if (!inputField) return;
 
-        // Fonction locale pour valider et envoyer le texte écrit
         const handleSend = () => {
             const text = inputField.value.trim();
             if (text) {
                 this.unlockMobileAudio();
                 this.sendToCoach(text);
-                inputField.value = ''; // Vide le champ après envoi
-                
-                // Force le clavier mobile à se ranger si l'utilisateur a fini
-                inputField.blur(); 
+                inputField.value = ''; 
+                inputField.blur(); // Range le clavier virtuel
             }
         };
 
-        // Déclenchement au clic sur le bouton d'envoi
         if (sendBtn) {
             sendBtn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -111,7 +107,6 @@ const VoiceManager = {
             });
         }
 
-        // Déclenchement quand l'utilisateur appuie sur "Entrée" ou "Accéder" sur son clavier mobile
         inputField.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -121,7 +116,7 @@ const VoiceManager = {
     },
 
     /**
-     * Force le déblocage du haut-parleur sur iPhone/Safari
+     * Force le déblocage du haut-parleur sur mobile
      */
     unlockMobileAudio() {
         if ('speechSynthesis' in window) {
@@ -130,8 +125,18 @@ const VoiceManager = {
         }
     },
 
+    /**
+     * Démarre l'écoute (Sécurité : Bloqué si l'IA parle)
+     */
     startListening() {
         if (!this.recognition) return;
+
+        // ANTI-ÉCHO : On refuse d'ouvrir le micro si l'IA parle déjà
+        if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+            console.log("🚫 Micro bloqué : l'IA parle actuellement.");
+            return;
+        }
+
         try {
             this.recognition.start();
             this.isListening = true;
@@ -142,9 +147,13 @@ const VoiceManager = {
             }, 6000);
         } catch (e) {
             console.error("Impossible de lancer le micro :", e);
+            this.stopListening();
         }
     },
 
+    /**
+     * Arrête l'écoute du micro
+     */
     stopListening() {
         if (!this.isListening) return;
         clearTimeout(this.silenceTimer);
@@ -156,7 +165,7 @@ const VoiceManager = {
     },
 
     /**
-     * Traite la réponse et force le scroll pour éviter les bugs de clavier virtuel
+     * Traite la réponse et lance la synthèse vocale
      */
     handleCoachResponse(result) {
         if (!result) return;
@@ -175,7 +184,7 @@ const VoiceManager = {
             this.speak(textToSpeak);
         }
         
-        // Système d'auto-défilement ultra-précis pour le mobile
+        // Auto-défilement pour que le texte reste visible au-dessus du clavier mobile
         setTimeout(() => {
             const chatBox = document.getElementById('chat-box') || document.querySelector('.chat-messages, .chat-history');
             if (chatBox) {
@@ -185,8 +194,14 @@ const VoiceManager = {
         }, 150);
     },
 
+    /**
+     * Synthèse vocale avec coupure stricte du micro (Anti-boucle)
+     */
     speak(text) {
         if (!('speechSynthesis' in window)) return;
+
+        // 1. Désactivation IMMÉDIATE du micro avant que le son ne sorte
+        this.stopListening();
         window.speechSynthesis.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
@@ -194,9 +209,25 @@ const VoiceManager = {
         utterance.rate = 1.0; 
         utterance.pitch = 1.0;
 
+        // 2. Quand l'IA a fini sa phrase, on peut à nouveau écouter
+        utterance.onend = () => {
+            console.log("🔊 L'IA a fini de parler.");
+            // Si tu veux que le micro se relance tout seul après l'IA,
+            // supprime les deux barres '//' de la ligne ci-dessous :
+            // this.startListening();
+        };
+
+        utterance.onerror = () => {
+            console.log("Erreur de synthèse vocale.");
+            this.stopListening();
+        };
+
         window.speechSynthesis.speak(utterance);
     },
 
+    /**
+     * Change l'aspect visuel du bouton
+     */
     updateUI(active) {
         const micBtn = document.getElementById('mic-btn') || document.querySelector('.mic-button');
         if (micBtn) {
