@@ -627,23 +627,16 @@
     </div>
     
 <!-- 📄 Scripts ordonnés logiquement pour éviter les erreurs d'initialisation -->
-    <script src="storage.js"></script>
-    <script src="voice.js"></script> <!-- 1. Chargé en premier pour créer voiceManager -->
-    <script src="settings.js"></script> <!-- 2. Chargé après pour pouvoir utiliser voiceManager -->
-    <script src="notifications.js"></script>
-    <script src="insult-detection.js"></script>
-    <script src="reformulation.js"></script>
-    <script src="ai.js"></script>
-    <script src="statistics.js"></script>
-    <script src="achievements.js"></script>
-    <script src="ui.js"></script>
-    <script src="script.js"></script>
-<!-- Tes autres scripts (ui.js, etc.) si tu as mis le cache-buster dessus aussi -->
+<!-- Garde uniquement ce bloc unique et propre, supprime les doublons juste au-dessus -->
+    <script src="storage.js?v=1.1"></script>
     <script src="voice.js?v=1.1"></script>
     <script src="settings.js?v=1.1"></script>
+    <script src="notifications.js?v=1.1"></script>
+    <script src="insult-detection.js?v=1.1"></script>
+    <script src="reformulation.js?v=1.1"></script>
+    <script src="ai.js?v=1.1"></script>
+    <script src="statistics.js?v=1.1"></script>
+    <script src="achievements.js?v=1.1"></script>
+    <script src="ui.js?v=1.1"></script>
     <script src="script.js?v=1.1"></script>
-
 </body>
-</html>
-</body>
-</html>
