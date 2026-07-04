@@ -1,29 +1,32 @@
 /**
- * Vocal Coach - Module Voix & Reconnaissance (Version Mobile Sécurité Absolue)
- * Bloque strictement toute captation de texte pendant que l'IA parle pour éviter l'écho.
+ * Vocal Coach - Module Voix & Reconnaissance (Version Finale et Sécurisée)
+ * Gère le micro, la synthèse vocale avec coupure automatique et les entrées clavier.
  */
 
 const VoiceManager = {
     recognition: null,
     isListening: false,
     silenceTimer: null,
-    isAITalking: false, // <-- Verrou absolu anti-écho
+    isAITalking: false, // Double verrou anti-écho matériel pour mobile
 
+    /**
+     * Initialisation globale du module
+     */
     init() {
         this.initSpeechRecognition();
         this.setupMobileEvents();
         this.setupKeyboardInput();
-        console.log("🎙️ Module Voice (Version Sécurité Absolue) initialisé.");
+        console.log("🎙️ Module Voice Mobile (Anti-Écho & Sécurisé) initialisé.");
     },
 
     /**
-     * Initialise la reconnaissance vocale en mode compatible mobile
+     * Initialise l'API de reconnaissance vocale du navigateur
      */
     initSpeechRecognition() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         
         if (!SpeechRecognition) {
-            console.warn("La reconnaissance vocale n'est pas supportée sur ce navigateur mobile.");
+            console.warn("La reconnaissance vocale n'est pas supportée sur ce navigateur.");
             return;
         }
 
@@ -32,20 +35,25 @@ const VoiceManager = {
         this.recognition.continuous = false; 
         this.recognition.interimResults = false;
 
+        // Déclenché quand le téléphone a fini de capter une phrase
         this.recognition.onresult = async (event) => {
-            // SÉCURITÉ RADICALE : Si l'IA parle, on ignore complètement ce que le micro capte
+            // VERROU ABSOLU : Si l'IA parle, on détruit et on ignore la capture sonore
             if (this.isAITalking) {
-                console.log("🚫 Texte ignoré car l'IA parle actuellement.");
+                console.log("🚫 Texte ignoré : l'IA est en train de parler.");
                 return;
             }
 
-            const transcript = event.results[0][0].transcript;
-            console.log("Texte capté par le micro :", transcript);
-            this.sendToCoach(transcript);
+            try {
+                const transcript = event.results[0][0].transcript;
+                console.log("Texte capté par le micro :", transcript);
+                this.sendToCoach(transcript);
+            } catch (err) {
+                console.error("Erreur lors de la récupération du texte :", err);
+            }
         };
 
         this.recognition.onerror = (event) => {
-            console.error("Erreur micro mobile :", event.error);
+            console.error("Erreur micro ou permission :", event.error);
             this.stopListening();
         };
 
@@ -55,26 +63,34 @@ const VoiceManager = {
     },
 
     /**
-     * Envoie le texte au fichier ai.js et traite la réponse du dialogue
+     * Envoie de manière sécurisée le texte récupéré à la logique de ai.js
      */
     sendToCoach(text) {
-        if (this.isAITalking) return; // Sécurité supplémentaire
+        if (this.isAITalking || !text) return;
 
+        // Vérification de sécurité : est-ce que le fichier ai.js est bien chargé ?
         if (typeof aiCoach !== 'undefined' && typeof aiCoach.processTranscript === 'function') {
-            const result = aiCoach.processTranscript(text);
-            this.handleCoachResponse(result);
+            try {
+                const result = aiCoach.processTranscript(text);
+                this.handleCoachResponse(result);
+            } catch (err) {
+                console.error("Erreur lors de l'analyse par ai.js :", err);
+            }
         } else {
-            console.error("Erreur : L'instance 'aiCoach' de ai.js est introuvable.");
+            console.error("Erreur critique : L'instance 'aiCoach' du fichier ai.js est introuvable ou mal initialisée.");
+            // Secours visuel si le script IA est cassé
+            this.speak("Désolé, mon système d'analyse rencontre une erreur.");
         }
     },
 
     /**
-     * Attache les événements tactiles au bouton Micro (Optimisé pour mobiles)
+     * Attache les événements tactiles au bouton Micro (Optimisé pour les mobiles)
      */
     setupMobileEvents() {
         const micBtn = document.getElementById('mic-btn') || document.querySelector('.mic-button');
         
         if (micBtn) {
+            // Utilise 'touchstart' sur mobile pour éviter la latence de 300ms du 'click'
             const startEvent = 'ontouchstart' in window ? 'touchstart' : 'click';
             
             micBtn.addEventListener(startEvent, (e) => {
@@ -91,7 +107,7 @@ const VoiceManager = {
     },
 
     /**
-     * Gère l'envoi des messages écrits depuis le clavier du téléphone
+     * Gère l'envoi des messages écrits depuis le clavier (Utile sur PC Windows)
      */
     setupKeyboardInput() {
         const inputField = document.getElementById('chat-input') || document.querySelector('.chat-input fieldset input, #message-input');
@@ -105,7 +121,7 @@ const VoiceManager = {
                 this.unlockMobileAudio();
                 this.sendToCoach(text);
                 inputField.value = ''; 
-                inputField.blur(); // Range le clavier virtuel
+                inputField.blur(); // Ferme le clavier virtuel sur mobile
             }
         };
 
@@ -125,20 +141,25 @@ const VoiceManager = {
     },
 
     /**
-     * Force le déblocage du haut-parleur sur mobile
+     * Débloque le canal audio des téléphones (iOS/Android requièrent une action utilisateur)
      */
     unlockMobileAudio() {
         if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance('');
-            window.speechSynthesis.speak(utterance);
+            try {
+                const utterance = new SpeechSynthesisUtterance('');
+                window.speechSynthesis.speak(utterance);
+            } catch(e) {}
         }
     },
 
     /**
-     * Démarre l'écoute
+     * Démarre l'écoute du microphone
      */
     startListening() {
-        if (!this.recognition) return;
+        if (!this.recognition) {
+            console.warn("Reconnaissance vocale indisponible.");
+            return;
+        }
 
         // On refuse d'ouvrir le micro si l'IA parle
         if (this.isAITalking || ('speechSynthesis' in window && window.speechSynthesis.speaking)) {
@@ -151,6 +172,7 @@ const VoiceManager = {
             this.isListening = true;
             this.updateUI(true);
             
+            // Sécurité : si l'utilisateur ne dit rien pendant 6 secondes, on coupe pour économiser la batterie
             this.silenceTimer = setTimeout(() => {
                 this.stopListening();
             }, 6000);
@@ -161,39 +183,34 @@ const VoiceManager = {
     },
 
     /**
-     * Arrête l'écoute du micro
+     * Arrête proprement l'écoute du micro
      */
     stopListening() {
         if (!this.isListening) return;
-        clearTimeout(this.silenceTimer);
+        if (this.silenceTimer) clearTimeout(this.silenceTimer);
+        
         try {
             this.recognition.stop();
         } catch(e) {}
+        
         this.isListening = false;
         this.updateUI(false);
     },
 
     /**
-     * Traite la réponse et lance la synthèse vocale
+     * Reçoit la réponse de l'IA et prépare sa lecture vocale
      */
     handleCoachResponse(result) {
         if (!result) return;
         
-        let textToSpeak = "";
+        // On extrait le texte peu importe le type de réponse retourné par l'IA
+        let textToSpeak = result.response || "";
         
-        if (result.type === 'insult') {
-            textToSpeak = result.response;
-        } else if (result.type === 'normal' && result.response) {
-            textToSpeak = result.response;
-        } else if (result.type === 'success') {
-            textToSpeak = result.response;
-        }
-
         if (textToSpeak) {
             this.speak(textToSpeak);
         }
         
-        // Auto-défilement pour le mobile
+        // Force le scroll automatique vers le bas pour voir le texte sur mobile
         setTimeout(() => {
             const chatBox = document.getElementById('chat-box') || document.querySelector('.chat-messages, .chat-history');
             if (chatBox) {
@@ -204,32 +221,32 @@ const VoiceManager = {
     },
 
     /**
-     * Synthèse vocale avec verrouillage total
+     * Synthèse vocale avec coupure stricte et verrou matériel (Anti-écho)
      */
     speak(text) {
         if (!('speechSynthesis' in window)) return;
 
-        // 1. VERROUILLAGE : On coupe le micro et on active le bouclier anti-écho
+        // 1. Enclenchement du bouclier anti-écho
         this.isAITalking = true;
         this.stopListening();
-        window.speechSynthesis.cancel();
+        window.speechSynthesis.cancel(); // Stoppe toute voix en cours
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'fr-FR';
         utterance.rate = 1.0; 
         utterance.pitch = 1.0;
 
-        // 2. DÉVERROUILLAGE : Quand l'IA a VRAIMENT fini de parler
+        // 2. Extinction du bouclier quand la phrase est finie
         utterance.onend = () => {
-            console.log("🔊 L'IA a fini de parler. Désactivation du verrou.");
-            // On attend une demi-seconde de sécurité (le temps que le haut-parleur s'éteigne bien)
+            console.log("🔊 L'IA a fini de parler.");
+            // Petit délai de sécurité de 500ms avant de libérer le micro
             setTimeout(() => {
                 this.isAITalking = false;
             }, 500);
         };
 
         utterance.onerror = () => {
-            console.log("Erreur de synthèse vocale.");
+            console.log("Erreur ou interruption de la synthèse vocale.");
             this.isAITalking = false;
             this.stopListening();
         };
@@ -238,22 +255,23 @@ const VoiceManager = {
     },
 
     /**
-     * Change l'aspect visuel du bouton
+     * Gère le changement d'état visuel du bouton (Rouge/Vert)
      */
     updateUI(active) {
         const micBtn = document.getElementById('mic-btn') || document.querySelector('.mic-button');
         if (micBtn) {
             if (active) {
                 micBtn.classList.add('recording');
-                micBtn.style.backgroundColor = '#ff4d4d';
+                micBtn.style.backgroundColor = '#ff4d4d'; // Rouge enregistrement
             } else {
                 micBtn.classList.remove('recording');
-                micBtn.style.backgroundColor = '';
+                micBtn.style.backgroundColor = ''; // Reprend la couleur définie dans le CSS
             }
         }
     }
 };
 
+// Lancement automatique au chargement du DOM
 document.addEventListener("DOMContentLoaded", () => {
     VoiceManager.init();
 });
