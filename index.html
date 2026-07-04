@@ -626,16 +626,16 @@
         </div>
     </div>
     
-    <!-- 📄 Scripts ordonnés logiquement pour éviter les erreurs d'initialisation -->
+<!-- 📄 Scripts ordonnés logiquement pour éviter les erreurs d'initialisation -->
     <script src="storage.js"></script>
-    <script src="settings.js"></script>
+    <script src="voice.js"></script> <!-- 1. Chargé en premier pour créer voiceManager -->
+    <script src="settings.js"></script> <!-- 2. Chargé après pour pouvoir utiliser voiceManager -->
     <script src="notifications.js"></script>
     <script src="insult-detection.js"></script>
     <script src="reformulation.js"></script>
     <script src="ai.js"></script>
     <script src="statistics.js"></script>
     <script src="achievements.js"></script>
-    <script src="voice.js"></script>
     <script src="ui.js"></script>
     <script src="script.js"></script>
 </body>
