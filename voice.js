@@ -1,18 +1,19 @@
 /**
- * Vocal Coach - Module Voix & Reconnaissance (Version Mobile avec Anti-Écho)
- * Gère le micro, la synthèse vocale avec coupure automatique et les entrées clavier.
+ * Vocal Coach - Module Voix & Reconnaissance (Version Mobile Sécurité Absolue)
+ * Bloque strictement toute captation de texte pendant que l'IA parle pour éviter l'écho.
  */
 
 const VoiceManager = {
     recognition: null,
     isListening: false,
     silenceTimer: null,
+    isAITalking: false, // <-- Verrou absolu anti-écho
 
     init() {
         this.initSpeechRecognition();
         this.setupMobileEvents();
         this.setupKeyboardInput();
-        console.log("🎙️ Module Voice (Version Mobile Anti-Écho) initialisé.");
+        console.log("🎙️ Module Voice (Version Sécurité Absolue) initialisé.");
     },
 
     /**
@@ -32,6 +33,12 @@ const VoiceManager = {
         this.recognition.interimResults = false;
 
         this.recognition.onresult = async (event) => {
+            // SÉCURITÉ RADICALE : Si l'IA parle, on ignore complètement ce que le micro capte
+            if (this.isAITalking) {
+                console.log("🚫 Texte ignoré car l'IA parle actuellement.");
+                return;
+            }
+
             const transcript = event.results[0][0].transcript;
             console.log("Texte capté par le micro :", transcript);
             this.sendToCoach(transcript);
@@ -51,6 +58,8 @@ const VoiceManager = {
      * Envoie le texte au fichier ai.js et traite la réponse du dialogue
      */
     sendToCoach(text) {
+        if (this.isAITalking) return; // Sécurité supplémentaire
+
         if (typeof aiCoach !== 'undefined' && typeof aiCoach.processTranscript === 'function') {
             const result = aiCoach.processTranscript(text);
             this.handleCoachResponse(result);
@@ -126,13 +135,13 @@ const VoiceManager = {
     },
 
     /**
-     * Démarre l'écoute (Sécurité : Bloqué si l'IA parle)
+     * Démarre l'écoute
      */
     startListening() {
         if (!this.recognition) return;
 
-        // ANTI-ÉCHO : On refuse d'ouvrir le micro si l'IA parle déjà
-        if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+        // On refuse d'ouvrir le micro si l'IA parle
+        if (this.isAITalking || ('speechSynthesis' in window && window.speechSynthesis.speaking)) {
             console.log("🚫 Micro bloqué : l'IA parle actuellement.");
             return;
         }
@@ -184,7 +193,7 @@ const VoiceManager = {
             this.speak(textToSpeak);
         }
         
-        // Auto-défilement pour que le texte reste visible au-dessus du clavier mobile
+        // Auto-défilement pour le mobile
         setTimeout(() => {
             const chatBox = document.getElementById('chat-box') || document.querySelector('.chat-messages, .chat-history');
             if (chatBox) {
@@ -195,12 +204,13 @@ const VoiceManager = {
     },
 
     /**
-     * Synthèse vocale avec coupure stricte du micro (Anti-boucle)
+     * Synthèse vocale avec verrouillage total
      */
     speak(text) {
         if (!('speechSynthesis' in window)) return;
 
-        // 1. Désactivation IMMÉDIATE du micro avant que le son ne sorte
+        // 1. VERROUILLAGE : On coupe le micro et on active le bouclier anti-écho
+        this.isAITalking = true;
         this.stopListening();
         window.speechSynthesis.cancel();
 
@@ -209,16 +219,18 @@ const VoiceManager = {
         utterance.rate = 1.0; 
         utterance.pitch = 1.0;
 
-        // 2. Quand l'IA a fini sa phrase, on peut à nouveau écouter
+        // 2. DÉVERROUILLAGE : Quand l'IA a VRAIMENT fini de parler
         utterance.onend = () => {
-            console.log("🔊 L'IA a fini de parler.");
-            // Si tu veux que le micro se relance tout seul après l'IA,
-            // supprime les deux barres '//' de la ligne ci-dessous :
-            // this.startListening();
+            console.log("🔊 L'IA a fini de parler. Désactivation du verrou.");
+            // On attend une demi-seconde de sécurité (le temps que le haut-parleur s'éteigne bien)
+            setTimeout(() => {
+                this.isAITalking = false;
+            }, 500);
         };
 
         utterance.onerror = () => {
             console.log("Erreur de synthèse vocale.");
+            this.isAITalking = false;
             this.stopListening();
         };
 
