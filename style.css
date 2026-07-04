@@ -1499,6 +1499,17 @@ body {
     padding: 2rem;
 }
 
+
+/* ==========================================================================
+   AJOUT MODULE MICRO : GESTION DESKTOP (PC Windows) VS MOBILE
+   ========================================================================== */
+
+/* 💻 PAR DÉFAUT SUR PC : On masque l'énorme bouton de commande vocale */
+.mic-button, #mic-btn {
+    display: none !important;
+}
+
+/* 📱 ADAPTATION ÉCRANS INTERMÉDIAIRES ET SMARTPHONES */
 @media (max-width: 768px) {
     .sidebar {
         transform: translateX(-100%);
@@ -1555,6 +1566,53 @@ body {
     
     .settings-actions .btn {
         width: 100%;
+    }
+
+    /* 🎙️ CONFIGURATION DU BOUTON MICRO PHYSIQUE SUR MOBILE (Affiche une barre d'action tactile en bas) */
+    .mic-button, #mic-btn {
+        display: block !important; /* Force l'affichage du micro */
+        width: 100%;
+        max-width: 340px;
+        margin: 0.5rem auto 1rem auto;
+        padding: 0.85rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        color: white;
+        background: linear-gradient(135deg, var(--success), #34d399); /* Utilisation de ton vert existant */
+        border: none;
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        text-align: center;
+        cursor: pointer;
+        transition: transform var(--transition-fast), background var(--transition-normal);
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .mic-button:active, #mic-btn:active {
+        transform: scale(0.97);
+    }
+
+    /* 🔴 ÉTAT ENREGISTREMENT ACTIF (Piloté par voice.js lorsque le micro écoute) */
+    .mic-button.recording, #mic-btn.recording {
+        background: linear-gradient(135deg, var(--danger), #f87171) !important; /* Utilisation de ton rouge existant */
+        box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+        animation: pulseMicroMobile 1.5s infinite ease-in-out;
+    }
+}
+
+/* Animation pulsante synchronisée pour la captation vocale */
+@keyframes pulseMicroMobile {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+    }
+    50% {
+        transform: scale(1.03);
+        box-shadow: 0 4px 20px rgba(239, 68, 68, 0.6);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
     }
 }
 
